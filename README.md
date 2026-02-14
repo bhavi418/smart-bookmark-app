@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Project Overview
 
-## Getting Started
+Smart Bookmark App is a full-stack web application that allows users to securely save, manage, and view personal bookmarks.The app uses Google Authentication, Supabase Database, and Realtime updates so bookmarks appear instantly without refreshing the page.
 
-First, run the development server:
+Tech Stack
+•	Frontend: Next.js (App Router), React, TypeScript
+•	Backend as a Service: Supabase
+•	Authentication: Google OAuth via Supabase Auth
+•	Database: PostgreSQL (Supabase)
+•	Realtime: Supabase Realtime subscriptions
+•	Deployment: Vercel
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+ Features
+•	Google Login Authentication
+•	Add bookmarks
+•	Delete bookmarks
+•	Realtime updates (no page refresh required)
+•	Cloud deployment on Vercel
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Setup Instructions
+1.	Clone the Repository
+git clone YOUR_REPO_URL
+cd smart-bookmark-app
+npm install
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2.	 Add Environment Variables
+ Create .env.local:
+NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+Run: npm run dev
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3.	Supabase Setup
+Create a Supabase project
+Enable Google Provider
+Create table:
+create table bookmarks (
+id uuid primary key default uuid_generate_v4(),
+ user_id uuid,
+title text,
+ url text,
+ created_at timestamp default now());
+4.	 Enable Security (RLS)
+ alter table bookmarks enable row level security;
+ create policy "Users see own data"
+on bookmarks
+for all
+using (auth.uid() = user_id);
 
-## Learn More
+Whenever a bookmark is inserted, updated, or deleted, the UI automatically refreshes state without manual reload.
 
-To learn more about Next.js, take a look at the following resources:
+ Problems Faced & How I Solved Them
+Problem 1 — Google OAuth redirect_uri_mismatch
+Issue: Login failed with error 400.
+Solution: Added Supabase callback URL inside Google Cloud Console → Authorized Redirect URIs.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+ Problem 2 — Realtime updates not working
+Issue: Bookmarks updated only after refresh.
+Cause: Table was not enabled inside Supabase Realtime Publications.
+Solution:
+Database → Publications → Enable bookmarks table.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+ Problem 3 — Slow insertion updates
+Issue: New bookmark appeared with delay.
+Solution:
+Used realtime subscription to listen for postgres_changes instead of manual refresh.
 
-## Deploy on Vercel
+ Problem 4 — GitHub Push Errors (non-fast-forward)
+Issue: Local branch behind remote repository.
+Solution:
+git pull origin main --allow-unrelated-histories
+resolve README conflicts
+git push origin main
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+ Problem 5 — Supabase Environment Variables Not Loading
+Issue: supabaseUrl is required runtime error.
+Solution:
+Added .env.local
+Restarted dev server after changes.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Live Deployment: (https://smart-bookmark-app-ten-opal.vercel.app/)
+
+
