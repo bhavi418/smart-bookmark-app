@@ -55,27 +55,42 @@ export default function Dashboard() {
 
   useEffect(() => {
 
-    const init = async () => {
-      await fetchBookmarks()
-    }
+  fetchBookmarks()
 
-    init()
+  const channel = supabase
+    .channel("realtime-bookmarks")
 
-    // 🔥 Realtime subscription
-    const channel = supabase
-      .channel("realtime-bookmarks")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "bookmarks" },
-        () => fetchBookmarks()
-      )
-      .subscribe()
+    // ✅ INSERT realtime
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "bookmarks" },
+      (payload) => {
+        console.log("🔥 INSERT realtime", payload)
+        setBookmarks(prev => [payload.new as Bookmark, ...prev])
+      }
+    )
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    // ✅ DELETE realtime
+    .on(
+      "postgres_changes",
+      { event: "DELETE", schema: "public", table: "bookmarks" },
+      (payload) => {
+        setBookmarks(prev =>
+          prev.filter(b => b.id !== (payload.old as Bookmark).id)
+        )
+      }
+    )
 
-  }, [])
+    .subscribe((status) => {
+      console.log("Realtime Status:", status)
+    })
+
+  return () => {
+    supabase.removeChannel(channel)
+  }
+
+}, [])
+
 
   return (
     <div className="p-6 max-w-xl mx-auto space-y-4">
